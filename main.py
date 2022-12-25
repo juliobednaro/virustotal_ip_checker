@@ -99,6 +99,8 @@ class VirusTotal:
         print("Results have been saved to", self.malicious)
 
     def get_malicious_ip(self, ip_list):
+        if self.__API_KEY == "YOUR_KEY_BELONGS_HERE":
+            return print("You need to copy and paste your valid VirusTotal key to get results.")
         self.send_request(ip_list)
         self.save_malicious_to_file()
 
@@ -133,4 +135,4 @@ if __name__=="__main__":
         w, x, y, z, mask = re.split("[./]", get_ip_subnet())
         ip_list = MagicCookie(w, x, y, z, mask).get_ip_list()
 
-    # VirusTotal.get_malicious_ip(ip_list)
+    VirusTotal().get_malicious_ip(ip_list)
