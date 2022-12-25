@@ -34,7 +34,7 @@ class MagicCookie:
 
     def send_request(self):
         try:
-            self.__response = requests.post(self.REQ_URL, headers=headers,
+            self.__response = requests.post(self.REQ_URL, headers=self.REQ_HEADERS,
                                             data={
                                                 "ipw": self.ipw,
                                                 "ipx": self.ipx,
@@ -60,13 +60,47 @@ class MagicCookie:
         self.addresses = re.compile(r"(?<=<br>)(?P<addrs>\d+?\.\d+?\.\d+?\.\d+?)(?=<br>)").findall(self.__response_text)
         return self.addresses
 
+    def get_ip_list(self) -> list:
+        self.send_request()
+        return self.parse_response()
 
-API_KEY = "<API>"
-headers = {
-    "Accept": "application/json",
-    "x-apikey": API_KEY
-}
-malicious = []
+
+class VirusTotal:
+    __API_KEY = "YOUR_KEY_BELONGS_HERE"
+    REQ_HEADERS = {
+        "Accept": "application/json",
+        "x-apikey": __API_KEY
+    }
+    malicious = []
+    malicious_file = "malicious.txt"
+
+    def __init__(self):
+        pass
+
+    def send_request(self, ip_list):
+        for ip in ip_list:
+            url = "https://www.virustotal.com/api/v3/ip_addresses/{}".format(ip)
+            response = requests.get(url, headers=self.REQ_HEADERS)
+            try:
+                data = json.loads(response.text)
+                data = data["data"]["attributes"]["last_analysis_stats"]
+                mal, sus = data["malicious"], data["suspicious"]
+                if mal > 0 or sus > 0:
+                    self.malicious.append(ip)
+                print(ip, mal, sus)
+            except:
+                print("Failed fetching data for", ip)
+
+    def save_malicious_to_file(self):
+        with open(self.malicious_file, "a") as file:
+            for _ in self.malicious:
+                file.write(_)
+                file.write("\n")
+        print("Results have been saved to", self.malicious)
+
+    def get_malicious_ip(self, ip_list):
+        self.send_request(ip_list)
+        self.save_malicious_to_file()
 
 
 def enter_ip_list() -> str:
@@ -82,28 +116,6 @@ def enter_ip_subnet() -> str:
 def get_ip_list() -> tuple:
     ip_input = enter_ip_list()
     return tuple(ip_input.split(","))
-'''
-for i in range(256):
-    IP = "162.142.125.{}".format(i)
-    url = "https://www.virustotal.com/api/v3/ip_addresses/{}".format(IP)
-    response = requests.get(url, headers=headers)
-    try:
-        data = json.loads(response.text)
-        data = data["data"]["attributes"]["last_analysis_stats"]
-        mal, sus = data["malicious"], data["suspicious"]
-        if mal > 0 or sus > 0:
-            malicious.append(IP)
-        print(IP, mal, sus)
-    except:
-        print("Failed fetching data for", IP)
-
-
-
-with open("malicious.txt", "a") as file:
-    for _ in malicious:
-        file.write(_)
-        file.write("\n")
-'''
 
 
 def get_ip_subnet() -> str:
@@ -119,4 +131,6 @@ if __name__=="__main__":
         ip_list = get_ip_list()
     else:
         w, x, y, z, mask = re.split("[./]", get_ip_subnet())
-        MagicCookie(w, x, y, z, mask).send_request()
+        ip_list = MagicCookie(w, x, y, z, mask).get_ip_list()
+
+    # VirusTotal.get_malicious_ip(ip_list)
